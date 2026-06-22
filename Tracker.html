@@ -1,0 +1,887 @@
+```html
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Contract Tracker</title>
+    
+    <!-- Tailwind CSS for modern responsive utility styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts (Inter) & Material Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Material+Icons+Round&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar styling for iOS styling match */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 999px;
+        }
+        .active-scale:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+<body class="bg-black text-zinc-100 min-h-screen flex flex-col justify-between overflow-x-hidden antialiased">
+
+    <div class="w-full max-w-md mx-auto bg-zinc-950 min-h-screen shadow-2xl flex flex-col justify-between border-x border-zinc-900">
+        
+        <!-- Header -->
+        <header class="sticky top-0 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900 px-4 py-4 z-40 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                    <span class="material-icons-round text-emerald-400 text-lg">timeline</span>
+                </div>
+                <div>
+                    <h1 class="text-sm font-extrabold tracking-tight text-white leading-none">Contract Tracker</h1>
+                    <span class="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">3-On, 3-Off Pattern</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <!-- Gross/Net Mode Fast Switcher -->
+                <button id="btn-toggle-tax-mode" onclick="toggleGrossNetMode()" class="px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-extrabold text-emerald-400 uppercase tracking-wider active-scale flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="tax-mode-label">Net Pay</span>
+                </button>
+
+                <!-- Settings Drawer Trigger -->
+                <button onclick="openDrawer()" class="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 active-scale">
+                    <span class="material-icons-round text-lg">tune</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 p-4 space-y-5 pb-24">
+            
+            <!-- Primary Dashboard HUD Metrics Grid -->
+            <div class="grid grid-cols-2 gap-3">
+                
+                <!-- Card 1: Money Banked -->
+                <div class="bg-zinc-900/40 border border-zinc-800/80 p-4 rounded-2xl flex flex-col justify-between space-y-3 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-brand-500/5 rounded-full blur-xl"></div>
+                    <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                        <span class="material-icons-round text-xs text-brand-500">payments</span>
+                        Money Banked
+                    </span>
+                    <div>
+                        <div class="text-2xl font-black text-white tracking-tight" id="hud-banked">€0.00</div>
+                        <p class="text-[9px] text-zinc-500 font-semibold mt-0.5" id="hud-banked-sub">Calculated dynamically</p>
+                    </div>
+                </div>
+
+                <!-- Card 2: Cash Remaining -->
+                <div class="bg-zinc-900/40 border border-zinc-800/80 p-4 rounded-2xl flex flex-col justify-between space-y-3">
+                    <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                        <span class="material-icons-round text-xs text-amber-500">pending_actions</span>
+                        Remaining Value
+                    </span>
+                    <div>
+                        <div class="text-2xl font-black text-white tracking-tight" id="hud-remaining">€0.00</div>
+                        <p class="text-[9px] text-zinc-500 font-semibold mt-0.5" id="hud-remaining-sub">To end of contract</p>
+                    </div>
+                </div>
+
+                <!-- Card 3: Days Remaining Countdown -->
+                <div class="bg-zinc-900/40 border border-zinc-800/80 p-4 rounded-2xl flex flex-col justify-between space-y-3 col-span-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                            <span class="material-icons-round text-xs text-sky-500">hourglass_empty</span>
+                            Contract Timeline Status
+                        </span>
+                        <span class="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full" id="timeline-percent">0% Done</span>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <!-- Progress bar -->
+                        <div class="w-full bg-zinc-950 h-2.5 rounded-full overflow-hidden border border-zinc-900 flex">
+                            <div id="progress-bar-fill" class="bg-brand-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px] font-semibold text-zinc-400">
+                            <span id="hud-days-completed">0 / 64 Calendar Days</span>
+                            <span id="hud-days-left">64 Days Remaining</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulation Slider Panel -->
+            <div class="bg-zinc-900/20 border border-zinc-900 p-4 rounded-2xl space-y-3.5">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xs font-bold text-white tracking-tight">Timeline Simulation</h2>
+                        <p class="text-[9px] text-zinc-500 font-semibold">Slide to change the active tracker date</p>
+                    </div>
+                    
+                    <!-- Auto-Sync Toggle -->
+                    <button id="btn-auto-sync" onclick="toggleAutoSync()" class="flex items-center gap-1 bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full text-[10px] font-extrabold text-zinc-400 active-scale">
+                        <span class="material-icons-round text-xs">sync</span>
+                        <span>Auto-Sync Real Date</span>
+                    </button>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex items-center gap-3">
+                        <input type="range" id="simulation-slider" min="0" max="63" value="0" oninput="onSliderChange(this.value)" class="flex-1 accent-emerald-500 bg-zinc-950 h-1.5 rounded-lg appearance-none cursor-pointer border border-zinc-900">
+                        <span class="text-xs font-black text-white w-12 text-right" id="slider-day-indicator">Day 1</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[9px] text-zinc-500 font-extrabold uppercase tracking-wider">
+                        <span>June 29, 2026</span>
+                        <span id="current-simulated-date" class="text-emerald-400 font-bold bg-emerald-500/5 px-2 py-0.5 rounded">Simulating: June 29</span>
+                        <span>August 31, 2026</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar Section Header -->
+            <div class="flex items-center justify-between pt-2">
+                <div>
+                    <h3 class="text-xs font-black text-white uppercase tracking-wider">Calendar Duty Checklist</h3>
+                    <p class="text-[10px] text-zinc-500">Tap days to manually log details</p>
+                </div>
+                <!-- Reset Button -->
+                <button onclick="showResetConfirmation()" class="text-[10px] font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 px-2.5 py-1 rounded-full active-scale transition-colors">
+                    Reset Log
+                </button>
+            </div>
+
+            <!-- Calendar Display Months -->
+            <div class="space-y-6">
+                <!-- June Card -->
+                <div class="bg-zinc-950 border border-zinc-900 p-4 rounded-2xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-extrabold text-white tracking-tight">June 2026</h4>
+                        <span class="text-[10px] text-zinc-400 font-bold bg-zinc-900/80 px-2 py-0.5 rounded-md" id="calc-summary-june">€0.00 / €86.67</span>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1.5 text-center text-[10px] text-zinc-500 font-black uppercase tracking-wider mb-1">
+                        <div class="text-zinc-600">M</div>
+                        <div class="text-zinc-600">T</div>
+                        <div class="text-zinc-600">W</div>
+                        <div class="text-zinc-600">T</div>
+                        <div class="text-zinc-600">F</div>
+                        <div class="text-emerald-500/80">S</div>
+                        <div class="text-emerald-500/80">S</div>
+                    </div>
+                    <div id="grid-june" class="grid grid-cols-7 gap-1.5"></div>
+                </div>
+
+                <!-- July Card -->
+                <div class="bg-zinc-950 border border-zinc-900 p-4 rounded-2xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-extrabold text-white tracking-tight">July 2026</h4>
+                        <span class="text-[10px] text-zinc-400 font-bold bg-zinc-900/80 px-2 py-0.5 rounded-md" id="calc-summary-july">€0.00 / €1,300.00</span>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1.5 text-center text-[10px] text-zinc-500 font-black uppercase tracking-wider mb-1">
+                        <div class="text-zinc-600">M</div>
+                        <div class="text-zinc-600">T</div>
+                        <div class="text-zinc-600">W</div>
+                        <div class="text-zinc-600">T</div>
+                        <div class="text-zinc-600">F</div>
+                        <div class="text-emerald-500/80">S</div>
+                        <div class="text-emerald-500/80">S</div>
+                    </div>
+                    <div id="grid-july" class="grid grid-cols-7 gap-1.5"></div>
+                </div>
+
+                <!-- August Card -->
+                <div class="bg-zinc-950 border border-zinc-900 p-4 rounded-2xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-extrabold text-white tracking-tight">August 2026</h4>
+                        <span class="text-[10px] text-zinc-400 font-bold bg-zinc-900/80 px-2 py-0.5 rounded-md" id="calc-summary-august">€0.00 / €1,300.00</span>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1.5 text-center text-[10px] text-zinc-500 font-black uppercase tracking-wider mb-1">
+                        <div class="text-zinc-600">M</div>
+                        <div class="text-zinc-600">T</div>
+                        <div class="text-zinc-600">W</div>
+                        <div class="text-zinc-600">T</div>
+                        <div class="text-zinc-600">F</div>
+                        <div class="text-emerald-500/80">S</div>
+                        <div class="text-emerald-500/80">S</div>
+                    </div>
+                    <div id="grid-august" class="grid grid-cols-7 gap-1.5"></div>
+                </div>
+            </div>
+
+            <!-- Real-time Tax Calculation Insight Module -->
+            <div class="bg-zinc-900/30 border border-zinc-900 p-5 rounded-2xl space-y-4">
+                <div class="flex items-center gap-2 pb-2 border-b border-zinc-900">
+                    <span class="material-icons-round text-brand-500">account_balance_wallet</span>
+                    <div>
+                        <h3 class="text-xs font-extrabold text-white tracking-tight">Estonia Student Tax Deductions</h3>
+                        <p class="text-[9px] text-zinc-500 font-semibold">Projections based on your 2026 profile</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2.5 text-xs text-zinc-400 font-semibold">
+                    <div class="flex justify-between items-center">
+                        <span class="text-zinc-500">Estimated Total Gross:</span>
+                        <span id="tax-calc-gross" class="text-white font-bold">€0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-zinc-500 flex items-center gap-1">Unemployment Fund (1.6%):</span>
+                        <span id="tax-calc-unemp" class="text-red-400 font-bold">-€0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-zinc-500 flex items-center gap-1">Funded Pension II Sammas (<span id="pension-percentage-text">2%</span>):</span>
+                        <span id="tax-calc-pension" class="text-red-400 font-bold">-€0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-zinc-500 flex items-center gap-1">Income Tax (22% with Exemption):</span>
+                        <span id="tax-calc-incometax" class="text-red-400 font-bold">-€0.00</span>
+                    </div>
+                    <div class="pt-2 border-t border-zinc-900 flex justify-between items-center">
+                        <span class="text-white font-black text-xs">Projected Net Take-home:</span>
+                        <span id="tax-calc-net" class="text-emerald-400 font-extrabold text-sm">€0.00</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Drawer backdrop and modal content -->
+        <div id="drawer-backdrop" class="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm hidden transition-opacity duration-300 opacity-0" onclick="closeDrawer()"></div>
+        <div id="settings-drawer" class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-zinc-950 border-t border-zinc-900 rounded-t-3xl z-50 transform translate-y-full transition-transform duration-300 ease-out p-6 space-y-6">
+            
+            <div class="w-12 h-1 bg-zinc-800 rounded-full mx-auto -mt-2"></div>
+            
+            <div class="flex items-center justify-between pb-2 border-b border-zinc-900">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <span class="material-icons-round text-brand-500">tune</span>
+                    Tracker Settings
+                </h3>
+                <button onclick="closeDrawer()" class="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 active-scale">
+                    <span class="material-icons-round text-sm">close</span>
+                </button>
+            </div>
+
+            <div class="space-y-2.5">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Contract Schedule Type</label>
+                <div class="bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/50 flex items-center justify-between">
+                    <span class="text-xs font-bold text-emerald-400 flex items-center gap-2">
+                        <span class="material-icons-round text-sm">event_repeat</span>
+                        3-On, 3-Off Rolling Pattern
+                    </span>
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[9px] font-extrabold">Active</span>
+                </div>
+                <p class="text-[10px] text-zinc-500 leading-normal">Your schedule is set up for a continuous rolling 3-on, 3-off pattern starting June 29. Work shifts automatically fall on weekends whenever your rotation demands it.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Basic Exemption (€700)</label>
+                    <button id="btn-toggle-exemption" onclick="toggleExemption()" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 flex items-center justify-between text-left active-scale">
+                        <span class="text-xs font-bold text-zinc-200" id="exemption-state-text">Applied</span>
+                        <div class="w-2.5 h-2.5 rounded-full bg-emerald-500" id="exemption-indicator"></div>
+                    </button>
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Funded Pension (II Sammas)</label>
+                    <select id="select-pension" onchange="updatePensionRate(this.value)" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs font-bold text-zinc-200 outline-none focus:border-emerald-500">
+                        <option value="0.00">0% (Opted out)</option>
+                        <option value="0.02" selected>2% (Standard)</option>
+                        <option value="0.04">4%</option>
+                        <option value="0.06">6%</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pt-2">
+                <button onclick="closeDrawer()" class="w-full bg-zinc-100 hover:bg-white text-zinc-950 font-bold py-3.5 rounded-xl text-xs active-scale">
+                    Apply & Close
+                </button>
+            </div>
+        </div>
+
+        <!-- Custom iOS Confirmation Dialog Modal (Replaces unsafe window alerts) -->
+        <div id="confirm-backdrop" class="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm hidden transition-opacity duration-300 opacity-0 flex items-center justify-center p-6">
+            <div id="confirm-modal" class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 w-full max-w-xs space-y-4 shadow-xl transform scale-95 transition-transform duration-300">
+                <div class="space-y-2 text-center">
+                    <h4 class="text-sm font-bold text-white" id="confirm-title">Are you sure?</h4>
+                    <p class="text-xs text-zinc-400 font-semibold" id="confirm-description">This action cannot be undone.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button id="confirm-cancel" class="flex-1 py-2.5 rounded-xl bg-zinc-800 text-xs font-bold text-zinc-300 active-scale">Cancel</button>
+                    <button id="confirm-accept" class="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-xs font-bold text-white active-scale">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Static Setup and Calendar Mapping ---
+        const START_DATE = new Date(2026, 5, 29); // June 29, 2026
+        const END_DATE = new Date(2026, 7, 31);   // August 31, 2026
+        const TOTAL_CALENDAR_DAYS = 64;           // June 29 to August 31
+        
+        // Month boundaries relative to index 0 (June 29)
+        const JUNE_LEN = 2;   // June 29, 30
+        const JULY_LEN = 31;  // July 1 - 31
+        const AUG_LEN = 31;   // Aug 1 - 31
+
+        // Base Financials
+        const MONTHLY_SALARY = 1300.00;
+        
+        // State Machine
+        let state = {
+            scheduleType: '3-on-3-off', // Hardcoded rolling pattern
+            pensionRate: 0.02,
+            exemptionActive: true,
+            grossMode: false,        // false = Net (Take Home), true = Gross
+            autoSync: false,
+            simulatedDayIndex: 0,
+            customDays: {}          // Format: { index: 'worked' | 'sick' | 'off_worked' | 'off' }
+        };
+
+        // Load State from Local Storage
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('contract_tracker_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state = { ...state, ...parsed };
+                }
+            } catch (e) {
+                console.error("Local storage failed to load:", e);
+            }
+        }
+
+        // Save State to Local Storage
+        function saveState() {
+            try {
+                localStorage.setItem('contract_tracker_state', JSON.stringify(state));
+            } catch (e) {
+                console.error("Local storage failed to save:", e);
+            }
+        }
+
+        // Get Date from Day Index
+        function getDateFromIndex(index) {
+            const date = new Date(START_DATE.getTime());
+            date.setDate(START_DATE.getDate() + index);
+            return date;
+        }
+
+        // Check if Day Index represents scheduled duty
+        function isScheduledShift(index) {
+            // Rolling 3 days on, 3 days off
+            return (index % 6) < 3;
+        }
+
+        // Get Month Index from Day Index (0 = June, 1 = July, 2 = August)
+        function getMonthFromIndex(index) {
+            if (index < JUNE_LEN) return 0;
+            if (index < JUNE_LEN + JULY_LEN) return 1;
+            return 2;
+        }
+
+        // Get Day State (Custom overrides or default values)
+        function getDayState(index) {
+            if (state.customDays[index]) {
+                return state.customDays[index];
+            }
+            return isScheduledShift(index) ? 'pending' : 'off';
+        }
+
+        // Compute precise tax profile for any given month gross amount
+        function calculateMonthlyTax(gross, monthIndex) {
+            // Unemployment insurance
+            const unemp = gross * 0.016;
+            
+            // Funded Pension (II Sammas chosen by user)
+            const pension = gross * state.pensionRate;
+            
+            // Basic Tax Exemption amount
+            let exemptionAmount = 0;
+            if (state.exemptionActive) {
+                if (monthIndex === 0) {
+                    // June (2 days pro-rated limit)
+                    exemptionAmount = (2 / 30) * 700;
+                } else {
+                    exemptionAmount = 700.00;
+                }
+            }
+            
+            // Taxable Gross Base
+            const taxableGross = gross - unemp - pension;
+            const taxableIncome = Math.max(0, taxableGross - exemptionAmount);
+            
+            // Flat 2026 Estonia tax (22%)
+            const incomeTax = taxableIncome * 0.22;
+            const net = gross - unemp - pension - incomeTax;
+            
+            return {
+                unemp: unemp,
+                pension: pension,
+                incomeTax: incomeTax,
+                net: net
+            };
+        }
+
+        // Compute pro-rated month-by-month financial calculations
+        function calculateFinancials() {
+            // Collect actual shifts per month based on checklist
+            let grossJune = 0;
+            let grossJuly = 0;
+            let grossAugust = 0;
+
+            // Step 1: Calculate total scheduled duty sessions per calendar month to pro-rate base monthly pay
+            let schedJune = 0;
+            let schedJuly = 0;
+            let schedAugust = 0;
+
+            for (let i = 0; i < TOTAL_CALENDAR_DAYS; i++) {
+                const mIdx = getMonthFromIndex(i);
+                if (isScheduledShift(i)) {
+                    if (mIdx === 0) schedJune++;
+                    else if (mIdx === 1) schedJuly++;
+                    else schedAugust++;
+                }
+            }
+
+            // June base pro-rate (2/30 days)
+            const juneBaseGross = (2 / 30) * MONTHLY_SALARY; // €86.67
+            const juneRatePerShift = juneBaseGross / schedJune; // €43.33/shift
+
+            // July standard base
+            const julyRatePerShift = MONTHLY_SALARY / schedJuly; // €81.25/shift
+
+            // August standard base
+            const augustRatePerShift = MONTHLY_SALARY / schedAugust; // €86.67/shift
+
+            // Step 2: Calculate active earnings (gross) based on logged day states
+            let totalGrossEarned = 0;
+            let totalGrossContract = juneBaseGross + (2 * MONTHLY_SALARY);
+
+            for (let i = 0; i < TOTAL_CALENDAR_DAYS; i++) {
+                const dayState = getDayState(i);
+                const mIdx = getMonthFromIndex(i);
+                
+                let shiftValue = 0;
+                if (mIdx === 0) shiftValue = juneRatePerShift;
+                else if (mIdx === 1) shiftValue = julyRatePerShift;
+                else shiftValue = augustRatePerShift;
+
+                if (dayState === 'worked' || dayState === 'off_worked') {
+                    if (mIdx === 0) grossJune += shiftValue;
+                    else if (mIdx === 1) grossJuly += shiftValue;
+                    else grossAugust += shiftValue;
+                    
+                    totalGrossEarned += shiftValue;
+                } else if (dayState === 'pending' && i < state.simulatedDayIndex) {
+                    // Past pending duties are default earned
+                    if (mIdx === 0) grossJune += shiftValue;
+                    else if (mIdx === 1) grossJuly += shiftValue;
+                    else grossAugust += shiftValue;
+
+                    totalGrossEarned += shiftValue;
+                }
+            }
+
+            // Calculate taxes for each month piece-wise
+            const taxJune = calculateMonthlyTax(grossJune, 0);
+            const taxJuly = calculateMonthlyTax(grossJuly, 1);
+            const taxAugust = calculateMonthlyTax(grossAugust, 2);
+
+            const totalJuneLimit = calculateMonthlyTax(juneBaseGross, 0);
+            const totalJulyLimit = calculateMonthlyTax(MONTHLY_SALARY, 1);
+            const totalAugustLimit = calculateMonthlyTax(MONTHLY_SALARY, 2);
+
+            const totalNetEarned = taxJune.net + taxJuly.net + taxAugust.net;
+            const totalNetContract = totalJuneLimit.net + totalJulyLimit.net + totalAugustLimit.net;
+
+            return {
+                grossJune, grossJuly, grossAugust,
+                netJune: taxJune.net, netJuly: taxJuly.net, netAugust: taxAugust.net,
+                totalGrossEarned, totalNetEarned,
+                totalGrossContract, totalNetContract,
+                juneLimit: state.grossMode ? juneBaseGross : totalJuneLimit.net,
+                julyLimit: state.grossMode ? MONTHLY_SALARY : totalJulyLimit.net,
+                augustLimit: state.grossMode ? MONTHLY_SALARY : totalAugustLimit.net,
+                fullTaxDetails: {
+                    unemp: taxJune.unemp + taxJuly.unemp + taxAugust.unemp,
+                    pension: taxJune.pension + taxJuly.pension + taxAugust.pension,
+                    incomeTax: taxJune.incomeTax + taxJuly.incomeTax + taxAugust.incomeTax
+                }
+            };
+        }
+
+        // Main Update UI Loop
+        function updateUI() {
+            const calc = calculateFinancials();
+            
+            // Set values depending on Gross/Net Toggle
+            const banked = state.grossMode ? calc.totalGrossEarned : calc.totalNetEarned;
+            const contractMax = state.grossMode ? calc.totalGrossContract : calc.totalNetContract;
+            const remaining = Math.max(0, contractMax - banked);
+
+            // Update Primary HUD cards
+            document.getElementById('hud-banked').textContent = `€${banked.toFixed(2)}`;
+            document.getElementById('hud-remaining').textContent = `€${remaining.toFixed(2)}`;
+            
+            document.getElementById('hud-banked-sub').textContent = `Total Contract Potential: €${contractMax.toFixed(2)}`;
+
+            // Timeline calculations
+            const daysCompleted = state.simulatedDayIndex;
+            const daysLeft = TOTAL_CALENDAR_DAYS - daysCompleted;
+            const percentDone = Math.round((daysCompleted / TOTAL_CALENDAR_DAYS) * 100);
+
+            document.getElementById('timeline-percent').textContent = `${percentDone}% Done`;
+            document.getElementById('progress-bar-fill').style.width = `${percentDone}%`;
+            document.getElementById('hud-days-completed').textContent = `${daysCompleted} / ${TOTAL_CALENDAR_DAYS} Calendar Days`;
+            document.getElementById('hud-days-left').textContent = `${daysLeft} Days Remaining`;
+
+            // Update slider details
+            document.getElementById('simulation-slider').value = state.simulatedDayIndex;
+            document.getElementById('slider-day-indicator').textContent = `Day ${state.simulatedDayIndex + 1}`;
+            
+            const activeSimDate = getDateFromIndex(state.simulatedDayIndex);
+            document.getElementById('current-simulated-date').textContent = `Simulating: ${activeSimDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
+            // Monthly summaries update
+            document.getElementById('calc-summary-june').textContent = `€${(state.grossMode ? calc.grossJune : calc.netJune).toFixed(2)} / €${calc.juneLimit.toFixed(2)}`;
+            document.getElementById('calc-summary-july').textContent = `€${(state.grossMode ? calc.grossJuly : calc.netJuly).toFixed(2)} / €${calc.julyLimit.toFixed(2)}`;
+            document.getElementById('calc-summary-august').textContent = `€${(state.grossMode ? calc.grossAugust : calc.netAugust).toFixed(2)} / €${calc.augustLimit.toFixed(2)}`;
+
+            // Update tax calculations card
+            document.getElementById('tax-calc-gross').textContent = `€${calc.totalGrossEarned.toFixed(2)}`;
+            document.getElementById('tax-calc-unemp').textContent = `-€${calc.fullTaxDetails.unemp.toFixed(2)}`;
+            document.getElementById('tax-calc-pension').textContent = `-€${calc.fullTaxDetails.pension.toFixed(2)}`;
+            document.getElementById('tax-calc-incometax').textContent = `-€${calc.fullTaxDetails.incomeTax.toFixed(2)}`;
+            document.getElementById('tax-calc-net').textContent = `€${calc.totalNetEarned.toFixed(2)}`;
+
+            // Render calendar grids
+            renderCalendar('grid-june', 0);
+            renderCalendar('grid-july', 1);
+            renderCalendar('grid-august', 2);
+        }
+
+        // Render individual calendar months
+        function renderCalendar(containerId, monthIdx) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            // Layout padding variables for true June, July, August 2026 week alignments
+            let padDaysCount = 0; // Monday start
+            let totalMonthDays = 0;
+            let offsetIndex = 0;
+
+            if (monthIdx === 0) {
+                // June 2026: June 1 is Monday. Contract June 29 (Mon) and June 30 (Tue)
+                padDaysCount = 0; // June 29 is Monday, starts on column index 0
+                totalMonthDays = 2;
+                offsetIndex = 0;
+            } else if (monthIdx === 1) {
+                // July 2026: July 1 is Wednesday (column index 2)
+                padDaysCount = 2; 
+                totalMonthDays = 31;
+                offsetIndex = JUNE_LEN;
+            } else {
+                // August 2026: August 1 is Saturday (column index 5)
+                padDaysCount = 5;
+                totalMonthDays = 31;
+                offsetIndex = JUNE_LEN + JULY_LEN;
+            }
+
+            // Draw alignment pad blocks
+            for (let i = 0; i < padDaysCount; i++) {
+                const pad = document.createElement('div');
+                pad.className = "h-11 bg-transparent";
+                container.appendChild(pad);
+            }
+
+            // Draw actual monthly date boxes
+            for (let day = 1; day <= totalMonthDays; day++) {
+                const overallIndex = offsetIndex + (day - 1);
+                const dayState = getDayState(overallIndex);
+                const isPast = overallIndex < state.simulatedDayIndex;
+                const isToday = overallIndex === state.simulatedDayIndex;
+                const isDuty = isScheduledShift(overallIndex);
+
+                const cell = document.createElement('button');
+                cell.onclick = () => onDayTapped(overallIndex);
+                
+                // Base grid elements classes
+                let baseClass = "h-11 rounded-xl text-[11px] font-bold flex flex-col items-center justify-between p-1.5 transition-all duration-150 active-scale border relative overflow-hidden ";
+                
+                // Color codes depend on check state
+                if (dayState === 'worked' || dayState === 'off_worked') {
+                    // Worked state (Bright Green indicator)
+                    baseClass += "bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
+                } else if (dayState === 'sick') {
+                    // Sick/Absent state (Faded Red indicator)
+                    baseClass += "bg-red-500/10 border-red-500/30 text-red-400";
+                } else if (dayState === 'off') {
+                    // Off Duty Rest days (Extremely Faded / recession mode)
+                    baseClass += "bg-zinc-950 border-dashed border-zinc-900 text-zinc-600 opacity-40";
+                } else {
+                    // Pending Duty Days (Clean solid slate panels)
+                    baseClass += "bg-zinc-900/60 border-zinc-800/80 text-zinc-100";
+                }
+
+                // Add indicator for current simulation day
+                if (isToday) {
+                    baseClass += " ring-2 ring-emerald-400 border-transparent ring-offset-2 ring-offset-zinc-950";
+                }
+
+                cell.className = baseClass;
+
+                // Day numbering
+                let monthDayNum = day;
+                if (monthIdx === 0) monthDayNum = day + 28; // June starts on June 29
+
+                const dayNumSpan = document.createElement('span');
+                dayNumSpan.textContent = monthDayNum;
+                dayNumSpan.className = "leading-none font-bold";
+                cell.appendChild(dayNumSpan);
+
+                // Small icon footer detailing day state
+                const footerIcon = document.createElement('span');
+                footerIcon.className = "material-icons-round text-[10px]";
+                
+                if (dayState === 'worked' || dayState === 'off_worked') {
+                    footerIcon.textContent = "check_circle";
+                } else if (dayState === 'sick') {
+                    footerIcon.textContent = "cancel";
+                } else if (dayState === 'off') {
+                    footerIcon.textContent = "weekend"; // Cozy chair for rest day
+                } else {
+                    footerIcon.textContent = "schedule"; // Pending clock
+                }
+                cell.appendChild(footerIcon);
+
+                container.appendChild(cell);
+            }
+        }
+
+        // Day tap handler (cycles through states)
+        function onDayTapped(index) {
+            const currentState = getDayState(index);
+            const isDuty = isScheduledShift(index);
+
+            if (isDuty) {
+                // Work Day Cycle: Pending -> Worked -> Unpaid Sick -> Pending
+                if (currentState === 'pending') {
+                    state.customDays[index] = 'worked';
+                } else if (currentState === 'worked') {
+                    state.customDays[index] = 'sick';
+                } else {
+                    delete state.customDays[index]; // Reset back to default pending
+                }
+            } else {
+                // Rest Day Cycle: Off -> Extra Worked Shift -> Off
+                if (currentState === 'off') {
+                    state.customDays[index] = 'off_worked';
+                } else {
+                    delete state.customDays[index]; // Reset back to default off
+                }
+            }
+
+            saveState();
+            updateUI();
+        }
+
+        // Simulation Slider movement handler
+        function onSliderChange(val) {
+            state.simulatedDayIndex = parseInt(val);
+            if (state.autoSync) {
+                toggleAutoSync(); // Break automatic sync when slider manually edited
+            }
+            saveState();
+            updateUI();
+        }
+
+        // Toggle automatic sync with real time calendar
+        function toggleAutoSync() {
+            state.autoSync = !state.autoSync;
+            const btn = document.getElementById('btn-auto-sync');
+            
+            if (state.autoSync) {
+                btn.className = "flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full text-[10px] font-extrabold text-emerald-400 active-scale";
+                syncToRealDate();
+            } else {
+                btn.className = "flex items-center gap-1 bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full text-[10px] font-extrabold text-zinc-400 active-scale";
+            }
+            saveState();
+        }
+
+        // Set simulated index to real date if inside contract bounds
+        function syncToRealDate() {
+            const today = new Date();
+            // Fallback for simulation testing outside contract timeline
+            if (today < START_DATE) {
+                state.simulatedDayIndex = 0;
+            } else if (today > END_DATE) {
+                state.simulatedDayIndex = TOTAL_CALENDAR_DAYS - 1;
+            } else {
+                const diffTime = Math.abs(today - START_DATE);
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                state.simulatedDayIndex = diffDays;
+            }
+            updateUI();
+        }
+
+        // Toggle tax mode from Gross to Net
+        function toggleGrossNetMode() {
+            state.grossMode = !state.grossMode;
+            const label = document.getElementById('tax-mode-label');
+            label.textContent = state.grossMode ? 'Gross Pay' : 'Net Pay';
+            saveState();
+            updateUI();
+        }
+
+        // Toggle standard student €700 exemption
+        function toggleExemption() {
+            state.exemptionActive = !state.exemptionActive;
+            
+            const btnText = document.getElementById('exemption-state-text');
+            const indicator = document.getElementById('exemption-indicator');
+
+            if (state.exemptionActive) {
+                btnText.textContent = "Applied";
+                indicator.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+            } else {
+                btnText.textContent = "Inactive";
+                indicator.className = "w-2.5 h-2.5 rounded-full bg-zinc-800";
+            }
+            saveState();
+            updateUI();
+        }
+
+        // Change Pension rate Sammas
+        function updatePensionRate(val) {
+            state.pensionRate = parseFloat(val);
+            document.getElementById('pension-percentage-text').textContent = `${(state.pensionRate * 100).toFixed(0)}%`;
+            saveState();
+            updateUI();
+        }
+
+        // Custom Safe Confirmation Dialog instead of browser confirm()
+        function showResetConfirmation() {
+            const backdrop = document.getElementById('confirm-backdrop');
+            const modal = document.getElementById('confirm-modal');
+            
+            backdrop.classList.remove('hidden');
+            setTimeout(() => {
+                backdrop.classList.remove('opacity-0');
+                modal.classList.remove('scale-95');
+            }, 10);
+
+            // Bind events
+            document.getElementById('confirm-cancel').onclick = () => {
+                closeConfirmation();
+            };
+
+            document.getElementById('confirm-accept').onclick = () => {
+                state.customDays = {};
+                saveState();
+                updateUI();
+                closeConfirmation();
+            };
+        }
+
+        function closeConfirmation() {
+            const backdrop = document.getElementById('confirm-backdrop');
+            const modal = document.getElementById('confirm-modal');
+            
+            backdrop.classList.add('opacity-0');
+            modal.classList.add('scale-95');
+            setTimeout(() => {
+                backdrop.classList.add('hidden');
+            }, 300);
+        }
+
+        // Drawer controllers
+        function openDrawer() {
+            const backdrop = document.getElementById('drawer-backdrop');
+            const drawer = document.getElementById('settings-drawer');
+            
+            backdrop.classList.remove('hidden');
+            drawer.classList.remove('translate-y-full');
+            
+            setTimeout(() => {
+                backdrop.classList.remove('opacity-0');
+            }, 10);
+        }
+
+        function closeDrawer() {
+            const backdrop = document.getElementById('drawer-backdrop');
+            const drawer = document.getElementById('settings-drawer');
+            
+            backdrop.classList.add('opacity-0');
+            drawer.classList.add('translate-y-full');
+            
+            setTimeout(() => {
+                backdrop.classList.add('hidden');
+            }, 300);
+        }
+
+        // --- Init Boot Sequence ---
+        window.onload = function() {
+            loadState();
+            
+            // Sync DOM settings values to matched loaded states
+            document.getElementById('select-pension').value = state.pensionRate.toFixed(2);
+            document.getElementById('pension-percentage-text').textContent = `${(state.pensionRate * 100).toFixed(0)}%`;
+            
+            // Exemption check toggle state setup
+            const btnText = document.getElementById('exemption-state-text');
+            const indicator = document.getElementById('exemption-indicator');
+            if (state.exemptionActive) {
+                btnText.textContent = "Applied";
+                indicator.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+            } else {
+                btnText.textContent = "Inactive";
+                indicator.className = "w-2.5 h-2.5 rounded-full bg-zinc-800";
+            }
+
+            const label = document.getElementById('tax-mode-label');
+            label.textContent = state.grossMode ? 'Gross Pay' : 'Net Pay';
+
+            if (state.autoSync) {
+                state.autoSync = false; // reset flag before trigger to ensure toggle works
+                toggleAutoSync();
+            }
+
+            updateUI();
+        }
+    </script>
+</body>
+</html>
+
+```
