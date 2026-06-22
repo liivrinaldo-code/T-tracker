@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Summer Job Tracker Pro</title>
+<style>
+body{font-family:-apple-system;background:#111827;color:white;max-width:800px;margin:auto;padding:20px}
+.card{background:#1f2937;padding:18px;border-radius:18px;margin-bottom:16px}
+.progress{height:20px;background:#374151;border-radius:10px}
+.bar{height:20px;background:#3b82f6;border-radius:10px}
+</style>
+</head>
+<body>
+<h1>☀️ Summer Job Tracker Pro</h1>
+
+<div class="card">
+<h2>Contract</h2>
+<p>29 June 2026 → 31 August 2026</p>
+<p>Holiday: 19 July → 25 July</p>
+<p>3 days on / 3 days off</p>
+<p>40 hours/week</p>
+<p>€1300/month</p>
+</div>
+
+<div class="card">
+<h2>Progress</h2>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<p id="completed"></p>
+<p id="daysleft"></p>
+</div>
+
+<div class="card">
+<h2>Salary</h2>
+<p id="grossEarned"></p>
+<p id="grossRemaining"></p>
+<p id="netEarned"></p>
+<p id="netRemaining"></p>
+</div>
+
+<div class="card">
+<h2>Next Shift Countdown</h2>
+<p id="nextShift"></p>
+</div>
+
+<script>
+const start=new Date("2026-06-29");
+const end=new Date("2026-08-31");
+const totalGross=(1300*(2/30))+1300+1300;
+
+function net(g){return g-(g*0.016)-(Math.max(0,g-700)*0.22)}
+const totalNet=net(1300*(2/30))+net(1300)+net(1300);
+
+const now=new Date();
+let p=0;
+if(now>start)p=Math.min(1,(now-start)/(end-start));
+
+document.getElementById("bar").style.width=(p*100)+"%";
+document.getElementById("completed").innerText="Completed: "+(p*100).toFixed(1)+"%";
+document.getElementById("daysleft").innerText="Days left: "+Math.max(0,Math.ceil((end-now)/86400000));
+
+document.getElementById("grossEarned").innerText="Gross earned: €"+(totalGross*p).toFixed(2);
+document.getElementById("grossRemaining").innerText="Gross remaining: €"+(totalGross*(1-p)).toFixed(2);
+document.getElementById("netEarned").innerText="Net earned: €"+(totalNet*p).toFixed(2);
+document.getElementById("netRemaining").innerText="Net remaining: €"+(totalNet*(1-p)).toFixed(2);
+
+// next shift
+const cycleStart=new Date("2026-06-29");
+let next= new Date(now);
+while(true){
+ let diff=Math.floor((next-cycleStart)/86400000);
+ let pos=((diff%6)+6)%6;
+ if(pos<3 && next>=now) break;
+ next.setDate(next.getDate()+1);
+}
+document.getElementById("nextShift").innerText="Next shift: "+next.toDateString();
+</script>
+</body>
+</html>
